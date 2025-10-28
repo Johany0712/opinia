@@ -1,0 +1,124 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Opinia — Comparador de Precios</title>
+  <style>
+    :root {
+      --bg:#f6f7f9; --card:#ffffff; --muted:#6b7280; --accent:#7bc2ff; --accent-dark:#00308b;
+      font-family: Inter, ui-sans-serif, system-ui;
+    }
+    *{box-sizing:border-box}
+    body{margin:0;background:linear-gradient(180deg,#f6fbf6 0%,var(--bg) 100%);color:#0f172a}
+    .wrap{max-width:1100px;margin:28px auto;padding:20px}
+    header{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;position:relative;}
+    .brand{display:flex;gap:12px;align-items:center}
+    .logo{width:56px;height:56px;border-radius:12px;background:linear-gradient(135deg,var(--accent),var(--accent-dark));display:flex;align-items:center;justify-content:center;color:white;font-weight:700;font-size:20px}
+    h1{margin:0;font-size:20px}
+    p.lead{margin:0;color:var(--muted);font-size:13px}
+    .menu-btn{background:var(--accent-dark);color:white;border:none;border-radius:8px;padding:8px 12px;cursor:pointer;font-size:18px;}
+    .menu-panel{display:none;position:absolute;top:70px;right:0;background:white;box-shadow:0 6px 18px rgba(0,0,0,0.1);border-radius:10px;overflow:hidden;z-index:100;}
+    .menu-panel a{display:block;padding:10px 16px;color:#111;text-decoration:none;font-size:15px;}
+    .menu-panel a:hover{background:#f1f5f9;}
+
+    .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:16px;margin-top:20px}
+    .card{background:var(--card);border-radius:12px;box-shadow:0 6px 18px rgba(15,23,42,0.06);padding:14px;display:flex;flex-direction:column;gap:8px;}
+    .title{font-weight:700;font-size:16px;}
+    .brandname{font-size:13px;color:var(--muted);}
+    .prices{display:flex;flex-direction:column;gap:4px;margin-top:6px;}
+    .price-item{font-size:14px;padding:6px 8px;border-radius:8px;}
+    .cheap{background:#ecfdf5;color:#047857;}
+    .medium{background:#fefce8;color:#92400e;}
+    .expensive{background:#fff1f2;color:#9f1239;}
+
+    footer{margin-top:22px;text-align:center;color:var(--muted);font-size:12px}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <div class="brand">
+        <div class="logo">P</div>
+        <div>
+          <h1>Opinia</h1>
+          <p class="lead">Comparador de precios de productos en supermercados peruanos.</p>
+        </div>
+      </div>
+      <button class="menu-btn" onclick="toggleMenu()">☰</button>
+      <div class="menu-panel" id="menuPanel">
+        <a href="index.html">🧠 Evaluador de Productos</a>
+        <a href="comparador.html">💰 Comparador de Precios</a>
+      </div>
+    </header>
+
+    <main>
+      <section class="grid" id="priceGrid"></section>
+    </main>
+
+    <footer>
+    Opinia · Precios referenciales — actualizados a octubre 2025.
+    </footer>
+  </div>
+
+  <script>
+    function toggleMenu(){
+      const menu = document.getElementById('menuPanel');
+      menu.style.display = (menu.style.display === 'block') ? 'none' : 'block';
+    }
+
+    const PRODUCTS = [
+      {name:'Danone Griego Natural', brand:'Danone', prices:{plazaVea:4.5, tottus:4.8, metro:4.7, wong:5.0}},
+      {name:'Laive Natural Probiótico', brand:'Laive', prices:{plazaVea:4.2, tottus:4.6, metro:4.5, wong:4.9}},
+      {name:'Gloria Batido Fresa', brand:'Gloria', prices:{plazaVea:3.9, tottus:4.2, metro:4.0, wong:4.3}},
+      {name:'Granola Quaker', brand:'Quaker', prices:{plazaVea:10.5, tottus:10.9, metro:10.7, wong:11.3}},
+      {name:'Cerealitas Integral', brand:'Cerealitas', prices:{plazaVea:7.8, tottus:8.0, metro:7.9, wong:8.4}},
+      {name:'Oreo Original', brand:'Mondelez', prices:{plazaVea:4.2, tottus:4.3, metro:4.4, wong:4.6}},
+      {name:'Pan Integral Laive', brand:'Laive', prices:{plazaVea:6.8, tottus:7.0, metro:6.9, wong:7.3}},
+      {name:'Pan Integral Bimbo', brand:'Bimbo', prices:{plazaVea:6.4, tottus:6.7, metro:6.6, wong:7.0}},
+      {name:'Pan Blanco Bimbo', brand:'Bimbo', prices:{plazaVea:4.9, tottus:5.0, metro:5.1, wong:5.3}},
+      {name:'Agua San Luis', brand:'San Luis', prices:{plazaVea:1.8, tottus:1.9, metro:2.0, wong:2.2}},
+      {name:'Frugos Néctar Durazno', brand:'Coca-Cola', prices:{plazaVea:5.5, tottus:5.8, metro:5.6, wong:6.0}},
+      {name:'Inca Kola Regular', brand:'Inca Kola', prices:{plazaVea:5.0, tottus:5.2, metro:5.1, wong:5.5}},
+      {name:'Quaker Avena Tradicional', brand:'Quaker', prices:{plazaVea:8.8, tottus:9.0, metro:9.1, wong:9.5}},
+      {name:'Nestlé Fitness Original', brand:'Nestlé', prices:{plazaVea:11.2, tottus:11.5, metro:11.3, wong:11.8}},
+      {name:'Nestlé Chocapic', brand:'Nestlé', prices:{plazaVea:10.5, tottus:10.8, metro:10.7, wong:11.2}},
+      {name:'Inka Chips Plátano', brand:'Inka Chips', prices:{plazaVea:7.5, tottus:7.8, metro:7.6, wong:8.0}},
+      {name:"Lay's Clásicas", brand:"Lay's", prices:{plazaVea:6.0, tottus:6.2, metro:6.1, wong:6.5}},
+      {name:'Doritos Nacho', brand:'Doritos', prices:{plazaVea:6.4, tottus:6.5, metro:6.6, wong:6.9}},
+      {name:"L'Oréal Elvive Óleo Extraordinario", brand:"L'Oréal", prices:{plazaVea:22.0, tottus:22.5, metro:22.2, wong:23.0}},
+      {name:'Head & Shoulders Anticaspa', brand:'Head & Shoulders', prices:{plazaVea:18.5, tottus:18.9, metro:18.7, wong:19.3}},
+    ];
+
+    function renderPrices(){
+      const grid = document.getElementById('priceGrid');
+      grid.innerHTML = '';
+
+      PRODUCTS.forEach(p => {
+        const values = Object.values(p.prices);
+        const min = Math.min(...values);
+        const max = Math.max(...values);
+
+        const card = document.createElement('div');
+        card.className = 'card';
+        card.innerHTML = `
+          <div class="title">${p.name}</div>
+          <div class="brandname">${p.brand}</div>
+          <div class="prices">
+            ${Object.entries(p.prices).map(([store,price])=>{
+              let cls = 'medium';
+              if(price===min) cls='cheap';
+              if(price===max) cls='expensive';
+              const storeName = store.replace(/([A-Z])/g,' $1').replace('plaza Vea','Plaza Vea').replace('tottus','Tottus').replace('metro','Metro').replace('wong','Wong');
+              return `<div class="price-item ${cls}">${storeName.charAt(0).toUpperCase() + storeName.slice(1)}: S/${price.toFixed(2)}</div>`;
+            }).join('')}
+          </div>
+        `;
+        grid.appendChild(card);
+      });
+    }
+
+    renderPrices();
+  </script>
+</body>
+</html>

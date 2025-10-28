@@ -1,0 +1,648 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Opinia — Evaluador de Productos</title>
+  <style>
+    :root{
+      --bg:#f6f7f9; --card:#ffffff; --muted:#6b7280; --accent:#7bc2ff; --accent-dark:#00308b;
+      --glass: rgba(255,255,255,0.6);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+    }
+    *{box-sizing:border-box}
+    body{margin:0;background:linear-gradient(180deg,#f6fbf6 0%,var(--bg) 100%);color:#0f172a}
+    .wrap{max-width:1100px;margin:28px auto;padding:20px}
+    header{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;position:relative;}
+    .brand{display:flex;gap:12px;align-items:center}
+    .logo{width:56px;height:56px;border-radius:12px;background:linear-gradient(135deg,var(--accent),var(--accent-dark));display:flex;align-items:center;justify-content:center;color:white;font-weight:700;font-size:20px;box-shadow:0 6px 18px rgba(21,128,61,0.12)}
+    h1{margin:0;font-size:20px}
+    p.lead{margin:0;color:var(--muted);font-size:13px}
+
+    /* Botón del menú */
+    .menu-btn {
+      background: var(--accent-dark);
+      color: white;
+      border: none;
+      border-radius: 8px;
+      padding: 8px 12px;
+      cursor: pointer;
+      font-size: 18px;
+    }
+
+    /* Menú deslizable */
+    .menu-panel {
+      display: none;
+      position: absolute;
+      top: 70px;
+      right: 0;
+      background: white;
+      box-shadow: 0 6px 18px rgba(0,0,0,0.1);
+      border-radius: 10px;
+      overflow: hidden;
+      z-index: 100;
+    }
+    .menu-panel a {
+      display: block;
+      padding: 10px 16px;
+      color: #111;
+      text-decoration: none;
+      font-size: 15px;
+    }
+    .menu-panel a:hover {
+      background: #f1f5f9;
+    }
+
+    .controls{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+    input[type="search"], select, .barcode-input{padding:10px 12px;border-radius:10px;border:1px solid #e6e9ef;background:white;min-width:180px}
+    button.btn{background:var(--accent);color:#000000;padding:10px 12px;border-radius:10px;border:0;cursor:pointer}
+    button.ghost{background:transparent;border:1px solid #e6e9ef;padding:9px 12px;border-radius:10px;cursor:pointer}
+    .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:16px;margin-top:20px}
+
+    .card{background:var(--card);border-radius:12px;overflow:hidden;box-shadow:0 6px 18px rgba(15,23,42,0.06);display:flex;flex-direction:column}
+    .thumb{
+  width: 100%;
+  height: 180px;
+  object-fit: contain;
+  background: #ffffff; /* Fondo blanco detrás de la imagen */
+  border-radius: 10px;
+  padding: 10px; /* espacio alrededor de la imagen */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: inset 0 0 4px rgba(0,0,0,0.05); /* le da una sensación de profundidad */
+}
+    .card-body{padding:12px;flex:1;display:flex;flex-direction:column}
+    .meta{display:flex;justify-content:space-between;gap:10px;align-items:center;flex-wrap:wrap}
+    .meta .brand{font-size:12px;color:var(--muted)}
+    .score{font-weight:700;padding:6px 8px;border-radius:8px;font-size:14px}
+    .score.excellent{background:#ecfdf5;color:#047857}
+    .score.good{background:#fefce8;color:#92400e}
+    .score.regular{background:#fff7ed;color:#92400e}
+    .score.bad{background:#fff1f2;color:#9f1239}
+    .rec-item img {
+  width: 60px;
+  height: 45px;
+  object-fit: cover;
+  border-radius: 6px;
+  flex-shrink: 0;
+}
+
+    .summary{margin-top:8px;color:#111827;font-size:14px;flex:1}
+    .keywords{margin-top:8px;display:flex;flex-wrap:wrap;gap:6px}
+    .kw{font-size:12px;padding:6px 8px;background:#f3f4f6;border-radius:999px;color:var(--muted)}
+
+    footer{margin-top:22px;text-align:center;color:var(--muted);font-size:12px}
+
+    /* === MODAL (corrección) === */
+    #modalRoot {
+      position: fixed;
+      inset: 0;
+      z-index: 9999;
+      display: none;
+    }
+
+    .modal {
+      position: fixed;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: rgba(2,6,23,0.45);
+      z-index: 9999;
+      padding: 20px;
+    }
+
+    .modal-card {
+      background: var(--card);
+      border-radius: 12px;
+      max-width: 960px;
+      width: 100%;
+      max-height: 90vh;
+      overflow: auto;
+      padding: 18px;
+      box-shadow: 0 30px 60px rgba(2,6,23,0.3);
+      animation: fadeIn 0.3s ease-in-out;
+    }
+
+    @keyframes fadeIn {
+      from {opacity: 0; transform: scale(0.97);}
+      to {opacity: 1; transform: scale(1);}
+    }
+      
+      /* 📱 Estilos para pantallas pequeñas (celulares) */
+@media (max-width: 600px) {
+  header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .controls {
+    flex-direction: column;
+    align-items: stretch;
+    width: 100%;
+  }
+
+  input[type="search"],
+  select,
+  .barcode-input,
+  button.btn,
+  button.ghost {
+    width: 100%;
+  }
+
+  .grid {
+    grid-template-columns: 1fr; /* una sola columna */
+  }
+
+  .card {
+    margin: 0 auto;
+  }
+
+  .menu-panel {
+    right: 10px;
+    width: 200px;
+  }
+
+  .modal-card {
+    width: 95%;
+    padding: 10px;
+    overflow-y: auto;
+  }
+}
+
+/* 💻 Estilos para tablets */
+@media (min-width: 601px) and (max-width: 900px) {
+  .grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .controls {
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+
+  .modal-card {
+    width: 80%;
+  }
+}
+
+      
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <div class="brand">
+        <div class="logo"> </div>
+          
+        <div>
+          <h1>Opinia</h1>
+          <p class="lead">Busca y descubre alternativas más saludables.</p>
+        </div>
+      </div>
+      
+      <div class="controls">
+        <input id="search" type="search" placeholder="Buscar producto o marca..." />
+        <select id="categoryFilter">
+          <option value="All">Todas las categorías</option>
+        </select>
+        <input id="barcode" class="barcode-input" placeholder="Pegar código de barras (simulación)" />
+        <button id="scanBtn" class="btn">Buscar</button>
+        <button id="showFav" class="ghost">Favoritos</button>
+      </div>
+
+      <button class="menu-btn" onclick="toggleMenu()">☰</button>
+      <div class="menu-panel" id="menuPanel">
+        <a href="index.html">🧠 Evaluador de Productos</a>
+        <a href="comparador.html">💰 Comparador de Precios</a>
+      </div>
+    </header>
+
+    <main>
+      <section id="grid" class="grid"></section>
+    </main>
+
+    <footer>
+      Opinia · Demo local — guarda imágenes en <strong>imagenes/</strong> o <strong>images/</strong>.
+    </footer>
+  </div>
+
+  <!-- Modal container -->
+  <div id="modalRoot"></div>
+
+  <!-- Scripts -->
+  <script>
+    // Devuelve array de candidatos para una ruta dada
+function buildCandidates(path){
+  if(!path) path = '';
+  // normalizar sin leading slash
+  if(path.startsWith('/')) path = path.slice(1);
+  // Si path ya empieza con images/ o imagenes/, probamos ambas variantes primero
+  const candidates = [];
+  if(path.startsWith('images/')){
+    const tail = path.slice('images/'.length);
+    candidates.push('images/' + tail);
+    candidates.push('imagenes/' + tail);
+  } else if(path.startsWith('imagenes/')){
+    const tail = path.slice('imagenes/'.length);
+    candidates.push('imagenes/' + tail);
+    candidates.push('images/' + tail);
+  } else if(path){
+    candidates.push('images/' + path);
+    candidates.push('imagenes/' + path);
+  }
+  // finalmente placeholders
+  candidates.push('imagenes/placeholder.png');
+  candidates.push('images/placeholder.png');
+  return candidates;
+}
+
+// Handler llamado por onerror en <img>
+// intenta la siguiente ruta disponible (almacenadas en data-alts)
+function tryAlternate(img){
+  try{
+    const alts = img.getAttribute('data-alts');
+    if(!alts) {
+      img.src = 'imagenes/placeholder.png';
+      return;
+    }
+    const list = alts.split('|').filter(Boolean);
+    if(list.length === 0){
+      img.removeAttribute('data-alts');
+      img.src = 'imagenes/placeholder.png';
+      return;
+    }
+    // tomar el siguiente candidato
+    const next = list.shift();
+    img.setAttribute('data-alts', list.join('|'));
+    img.src = next;
+  }catch(e){
+    img.src = 'imagenes/placeholder.png';
+  }
+}
+
+// función util para generar el atributo data-alts a partir de la ruta original
+function dataAltsFor(originalPath){
+  const cands = buildCandidates(originalPath);
+  // devolver como cadena separada con | (no se usan comas por seguridad)
+  return cands.join('|');
+}
+
+/* === AQUI VA TU DATA ORIGINAL (sin cambios en info) === */
+const DATA = [
+  // Yogures
+  { id:'p001', barcode:'7501000000011', name:'Danone Griego Natural', brand:'Danone', category:'Yogures', score:92, summary:'Yogur griego natural, alto en proteína y bajo en azúcares.', study:'Según estudios nutricionales, los yogures naturales con alto aporte proteico favorecen la saciedad y ayudan a mantener la masa muscular.', keywords:['Alta proteína','Probióticos','Bajo azúcar'], image:'/images/danoneyogurt.jpg', },
+  { id:'p002', barcode:'7501000000028', name:'Laive Natural Probiótico', brand:'Laive', category:'Yogures', score:88, summary:'Contiene cepas probióticas beneficiosas para la flora intestinal.', study:'Las formulaciones probióticas se asocian con mejor salud digestiva en consumidores regulares.', keywords:['Probióticos','Salud digestiva','Bajo azúcar'], image:'/images/laiveyogurt.jpg' },
+  { id:'p003', barcode:'7501000000035', name:'Gloria Batido Fresa', brand:'Gloria', category:'Yogures', score:65, summary:'Yogur batido con sabor a fresa; contiene edulcorantes y azúcares añadidos.', study:'Los productos saborizados suelen contener azúcares o edulcorantes que reducen su valor nutricional frente a yogures naturales.', keywords:['Edulcorantes','Procesado','Saborizado'], image:'/images/gloriayogurt.jpg', },
+
+  // Galletas / Granola
+  { id:'p004', barcode:'7501000000042', name:'Granola Quaker', brand:'Quaker', category:'Galletas', score:82, summary:'Granola con avena y frutos secos; buena fuente de fibra.', study:'Las granolas sin azúcares añadidos aportan fibra, vitaminas y energía sostenida.', keywords:['Fibra','Granos enteros','Energía'], image:'/images/granolaquaker.jpeg' },
+  { id:'p005', barcode:'7501000000059', name:'Cerealitas Integral', brand:'Cerealitas', category:'Galletas', score:80, summary:'Galleta integral de bajo contenido graso y buena fuente de granos enteros.', study:'Galletas integrales mejoran el aporte de fibra en la dieta si se consumen con moderación.', keywords:['Integral','Fibra','Bajo en grasa'], image:'/images/cerealitas.jpg' },
+  { id:'p006', barcode:'7501000000066', name:'Oreo Original', brand:'Mondelez', category:'Galletas', score:32, summary:'Galletas rellenas altas en azúcares y grasas saturadas.', study:'Las galletas con crema aportan calorías vacías y se recomiendan solo como capricho ocasional.', keywords:['Azúcar alta','Grasa saturada','Procesado'], image:'/images/oreo.jpeg' },
+
+  // Panes
+  { id:'p007', barcode:'7501000000073', name:'Pan Integral Vital', brand:'Bimbo', category:'Panes', score:90, summary:'Pan integral con buen aporte de fibra y granos enteros.', study:'Los panes integrales reducen el índice glucémico frente al pan blanco y aportan fibra dietética.', keywords:['Fibra','Granos enteros','Índice glucémico bajo'], image:'/images/bimbovital.jpg' },
+  { id:'p008', barcode:'7501000000080', name:'Pan Integral Bimbo', brand:'Bimbo', category:'Panes', score:84, summary:'Versión integral industrial, mejor que pan blanco pero procesado.', study:'Entre los panes industriales, las versiones integrales son preferibles por su fibra; sin embargo, los panes artesanales integrales suelen ser menos procesados.', keywords:['Integral','Procesado','Fibra'], image:'/images/panintegral.jpeg' },
+  { id:'p009', barcode:'7501000000097', name:'Pan Blanco Bimbo', brand:'Bimbo', category:'Panes', score:38, summary:'Pan blanco refinado con menor aporte nutricional.', study:'El pan blanco tiene mayor índice glucémico y menor contenido de fibra; conviene alternarlo con integrales.', keywords:['Refinado','Índice glucémico alto','Poca fibra'], image:'images/panblanco.jpeg' },
+
+  // Bebidas
+  { id:'p010', barcode:'7501000000103', name:'Agua San Luis', brand:'San Luis', category:'Bebidas', score:100, summary:'Agua purificada sin aditivos.', study:'El agua es la mejor opción para hidratación sin aporte calórico; recomendada por todas las guías.', keywords:['Sin aditivos','Hidratación','Cero calorías'], image:'/images/sanluis.jpeg' },
+  { id:'p011', barcode:'7501000000110', name:'Frugos Néctar Durazno', brand:'Del Valle', category:'Bebidas', score:60, summary:'Néctar con azúcar y fruta; aporte calórico moderado.', study:'Los néctares aportan vitaminas pero suelen contener azúcares añadidos; conviene consumir con moderación.', keywords:['Azúcares','Vitaminas','Moderado'], image:'/images/frugos.jpeg' },
+  { id:'p012', barcode:'7501000000127', name:'Inca Kola Regular', brand:'Inca Kola', category:'Bebidas', score:35, summary:'Bebida gaseosa con alto contenido de azúcar.', study:'Las bebidas azucaradas se asocian con mayor riesgo de obesidad y diabetes cuando son consumidas frecuentemente.', keywords:['Azúcar alto','Calorías vacías','Aditivos'], image:'/images/incakola.jpeg' },
+
+  // Cereales
+  { id:'p013', barcode:'7501000000134', name:'Quaker Avena Tradicional', brand:'Quaker', category:'Cereales', score:95, summary:'Avena integral sin azúcares añadidos; excelente fuente de fibra soluble.', study:'La avena ayuda a controlar el colesterol y aporta fibra soluble beneficiosa para la salud cardiovascular.', keywords:['Avena','Fibra soluble','Colesterol'], image:'/images/avenaquaker.jpg' },
+  { id:'p014', barcode:'7501000000141', name:'Nestlé Fitness Original', brand:'Nestlé', category:'Cereales', score:75, summary:'Cereal orientado a control de peso con vitaminas añadidas.', study:'Algunos cereales destinados al control de peso aportan micronutrientes; conviene revisar azúcares añadidos.', keywords:['Vitaminas','Bajo grasa','Moderado'], image:'/images/nestlecereales.jpeg' },
+  { id:'p015', barcode:'7501000000158', name:'Nestlé Chocapic', brand:'Nestlé', category:'Cereales', score:42, summary:'Cereal chocolateado con alto contenido de azúcar.', study:'Los cereales chocolateados suelen ser altos en azúcar y calóricos; preferir opciones sin azúcares añadidos.', keywords:['Azúcar añadido','Calorías','Procesado'], image:'/images/chocapic.jpg' },
+
+  // Snacks
+  { id:'p016', barcode:'7501000000165', name:'Inka Chips Plátano', brand:'Inka Chips', category:'Snacks', score:88, summary:'Chips de plátano al horno, menor procesado y grasas saludables.', study:'Snacks a base de frutas o tubérculos horneados tienen mejor perfil lipídico que frituras industriales.', keywords:['Horneado','Grasas saludables','Menos procesado'], image:'/images/inkachips.jpg' },
+  { id:'p017', barcode:'7501000000172', name:"Lay's Clásicas", brand:"Lay's", category:'Snacks', score:55, summary:'Papas fritas tradicionales con alto contenido de sal y grasas.', study:'Las frituras aportan grasas y sodio; su consumo frecuente se relaciona con problemas cardiovasculares.', keywords:['Fritas','Sodio','Grasas'], image:'/images/papitaslays.jpg' },
+  { id:'p018', barcode:'7501000000189', name:'Doritos Nacho', brand:'Doritos', category:'Snacks', score:45, summary:'Snack de maíz con saborizantes y sal elevada.', study:'Snacks altamente procesados aportan calorías vacías y sodio elevado; conviene consumo ocasional.', keywords:['Procesado','Sodio','Aditivos'], image:'/images/doritos.jpeg' },
+
+  // Champús
+  { id:'p019', barcode:'7501000000196', name:"L'Oréal Elvive Óleo Extraordinario", brand:"L'Oréal", category:'Champús', score:88, summary:'Champú hidratante con aceites vegetales para cabello seco.', study:'Formulaciones con aceites pueden mejorar la hidratación; ideal para cabello dañado.', keywords:['Hidratación','Aceites naturales','Suavidad'], image:'/images/loreal.jpeg' },
+  { id:'p020', barcode:'7501000000202', name:'Head & Shoulders Anticaspa', brand:'Head & Shoulders', category:'Champús', score:75, summary:'Eficaz para controlar caspa y exceso de grasa.', study:'Ingredientes como piritiona de zinc reducen la descamación; usar con moderación en cueros sensibles.', keywords:['Anticaspa','Zinc pyrithione','Control grasa'], image:'/images/shampoo.jpeg' }
+];
+
+let PRODUCTS = [...DATA]; // runtime copy (can be modified)
+      
+      applyUserReviews();
+
+const ROOT = document.getElementById('grid');
+const searchInput = document.getElementById('search');
+const categorySelect = document.getElementById('categoryFilter');
+const barcodeInput = document.getElementById('barcode');
+const scanBtn = document.getElementById('scanBtn');
+const showFavBtn = document.getElementById('showFav');
+
+const modalRoot = document.getElementById('modalRoot');
+
+function saveFavorites(favs){
+  localStorage.setItem('poulandia_favs', JSON.stringify(favs));
+}
+function loadFavorites(){
+  return JSON.parse(localStorage.getItem('poulandia_favs') || '[]');
+}
+let favorites = loadFavorites();
+
+function getCategories(){
+  const cats = Array.from(new Set(PRODUCTS.map(p => p.category)));
+  return ['All', ...cats];
+}
+
+function scoreLabel(score){
+  if(score>=85) return {cls:'excellent', text:'Excelente'};
+  if(score>=70) return {cls:'good', text:'Bueno'};
+  if(score>=40) return {cls:'regular', text:'Regular'};
+  return {cls:'bad', text:'Malo'};
+}
+
+function buildCategoryOptions(){
+  const cats = getCategories();
+  categorySelect.innerHTML = cats.map(c => `<option value="${c}">${c==='All' ? 'Todas las categorías' : c}</option>`).join('');
+}
+
+function computeRankings(){
+  // returns map category -> ordered list
+  const map = {};
+  PRODUCTS.forEach(p => {
+    if(!map[p.category]) map[p.category]=[];
+    map[p.category].push(p);
+  });
+  Object.keys(map).forEach(cat => map[cat].sort((a,b)=>b.score - a.score));
+  return map;
+}
+
+function renderGrid(filterText='', category='All'){
+  ROOT.innerHTML='';
+  const lower = filterText.trim().toLowerCase();
+  const list = PRODUCTS.filter(p => {
+    if(category !== 'All' && p.category !== category) return false;
+    return (p.name + ' ' + p.brand).toLowerCase().includes(lower);
+  });
+  if(list.length === 0){
+    ROOT.innerHTML = `<div style="grid-column:1/-1;padding:28px;background:white;border-radius:12px;text-align:center;color:${'#6b7280'}">No se encontraron productos.</div>`;
+    return;
+  }
+  const rankings = computeRankings();
+  list.forEach(p => {
+    const label = scoreLabel(p.score);
+    const card = document.createElement('article');
+    card.className = 'card';
+
+    // prepare image candidates as data-alts
+    const dataAlts = dataAltsFor(p.image);
+
+    card.innerHTML = `
+      <img class="thumb" src="${buildCandidates(p.image)[0] || 'imagenes/placeholder.png'}" alt="${p.name}" data-alts="${dataAlts}" onerror="tryAlternate(this)"/>
+      <div class="card-body">
+        <div class="meta">
+          <div>
+            <div style="font-weight:700">${p.name}</div>
+            <div class="brand" style="color:var(--muted);font-size:12px">${p.brand} • ${p.category}</div>
+          </div>
+          <div>
+            <div class="score ${label.cls}">${p.score} — ${label.text}</div>
+          </div>
+        </div>
+        <div class="summary">${p.summary}</div>
+        <div class="keywords">${p.keywords.map(k => `<span class="kw">${k}</span>`).join('')}</div>
+        <div class="card-footer">
+          <div style="font-size:12px;color:var(--muted)">${p.score>=80? '✅' : p.score>=60? '⚠️' : p.score>=40? '⚠️' : '🚫'} ${p.keywords.slice(0,3).join(' · ')}</div>
+          <div>
+            <button class="ghost" onclick="openModal('${p.id}')">Ver ficha</button>
+            <button class="fav-btn" onclick="toggleFav('${p.id}')">${favorites.includes(p.id)? '★' : '☆'}</button>
+          </div>
+        </div>
+      </div>
+    `;
+    ROOT.appendChild(card);
+  });
+}
+
+function openModal(id){
+  const p = PRODUCTS.find(x => x.id === id);
+  if(!p) return;
+  const rankings = computeRankings();
+  const list = rankings[p.category] || [];
+  const pos = list.findIndex(x=>x.id===p.id) + 1;
+
+  // recommendations: healthier (higher score) in same category, or top items
+  let recs = list.filter(x => x.id !== p.id && x.score > p.score).slice(0,4);
+  if(recs.length === 0){
+    recs = list.filter(x => x.id !== p.id).slice(0,4);
+  }
+
+  const imgAlts = dataAltsFor(p.image);
+  const firstImg = buildCandidates(p.image)[0] || 'imagenes/placeholder.png';
+
+  modalRoot.style.display = 'block';
+  modalRoot.innerHTML = `
+    <div class="modal" onclick="closeModal(event)">
+      <div class="modal-card" onclick="event.stopPropagation()">
+        <div style="display:flex;justify-content:space-between;align-items:center;">
+          <div style="display:flex;gap:12px;align-items:center">
+            <img src="${firstImg}" style="width:110px;height:110px;object-fit:cover;border-radius:8px" data-alts="${imgAlts}" onerror="tryAlternate(this)"/>
+            <div>
+              <div style="font-size:18px;font-weight:700">${p.name}</div>
+              <div style="color:var(--muted);font-size:13px">${p.brand} • ${p.category}</div>
+            </div>
+          </div>
+          <div style="text-align:right">
+            <div class="score ${scoreLabel(p.score).cls}" style="font-size:18px;padding:8px 12px;border-radius:10px">${p.score}</div>
+            <div style="font-size:12px;color:var(--muted);margin-top:6px">${pos}.º de ${list.length} en ${p.category}</div>
+          </div>
+        </div>
+
+        <div style="margin-top:12px;display:grid;grid-template-columns:1fr 360px;gap:16px">
+          <div>
+            <h4 style="margin:0 0 6px 0">Resumen</h4>
+            <p style="margin:0;color:#111827">${p.summary}</p>
+            <h4 style="margin:12px 0 6px 0">Según estudios</h4>
+            <p style="margin:0;color:var(--muted)">${p.study}</p>
+
+            <h4 style="margin:12px 0 6px 0">Palabras clave</h4>
+            <div style="display:flex;gap:8px;flex-wrap:wrap">${p.keywords.map(k => `<span class="kw">${k}</span>`).join('')}</div>
+
+            <div style="margin-top:12px">
+              <button class="btn" onclick="copyName('${p.name}')">Copiar nombre</button>
+              <button class="ghost" onclick="closeModal()">Cerrar</button>
+            </div>
+          </div>
+
+          <div>
+            <div class="small-list">
+              <strong>Comparativa (mejor → peor)</strong>
+              <ol style="margin:8px 0 0 18px;padding:0;color:var(--muted)">
+                ${list.map(item => `<li style="${item.id===p.id? 'font-weight:700;color:#111827' : ''}">${item.brand} — ${item.name} <span style="float:right">${item.score}</span></li>`).join('')}
+              </ol>
+            </div>
+
+            <div style="margin-top:12px">
+              <strong>Alternativas más saludables</strong>
+              <div style="margin-top:8px">
+                ${recs.map(r => {
+                  const rAlts = dataAltsFor(r.image);
+                  const rFirst = buildCandidates(r.image)[0] || 'imagenes/placeholder.png';
+                  return `
+                  <div class="rec-item" style="border:1px solid #f1f5f9;border-radius:8px;margin-bottom:8px;padding:6px">
+                    <img src="${rFirst}" data-alts="${rAlts}" onerror="tryAlternate(this)"/>
+                    <div style="flex:1">
+                      <div style="font-weight:600">${r.name}</div>
+                      <div style="font-size:12px;color:var(--muted)">${r.brand} • ${r.score}/100</div>
+                    </div>
+                    <div>
+                      <button class="ghost" onclick="openModal('${r.id}')">Ver</button>
+                    </div>
+                  </div>
+                `}).join('')}
+              </div>
+            </div>
+
+          </div>
+        </div>
+
+      </div>
+    </div>
+  `;
+}
+
+function closeModal(e){
+  if(e && e.target && e.target.classList && e.target.classList.contains('modal')) {
+    modalRoot.style.display='none';
+    modalRoot.innerHTML='';
+  } else {
+    modalRoot.style.display='none';
+    modalRoot.innerHTML='';
+  }
+}
+function copyName(name){
+  navigator.clipboard?.writeText(name);
+  alert('Nombre copiado: ' + name);
+}
+
+function toggleFav(id){
+  if(favorites.includes(id)){
+    favorites = favorites.filter(x=>x!==id);
+  } else {
+    favorites.push(id);
+  }
+  saveFavorites(favorites);
+  renderGrid(searchInput.value, categorySelect.value);
+}
+
+function showFavorites(){
+  const list = PRODUCTS.filter(p => favorites.includes(p.id));
+  if(list.length === 0){
+    alert('No tienes favoritos aún.');
+    return;
+  }
+  // temporarily render only favorites
+  ROOT.innerHTML = '';
+  list.forEach(p => {
+    const label = scoreLabel(p.score);
+    const card = document.createElement('article');
+    card.className = 'card';
+    const dataAlts = dataAltsFor(p.image);
+    const first = buildCandidates(p.image)[0] || 'imagenes/placeholder.png';
+    card.innerHTML = `
+      <img class="thumb" src="${first}" alt="${p.name}" data-alts="${dataAlts}" onerror="tryAlternate(this)"/>
+      <div class="card-body">
+        <div class="meta">
+          <div>
+            <div style="font-weight:700">${p.name}</div>
+            <div class="brand" style="color:var(--muted);font-size:12px">${p.brand} • ${p.category}</div>
+          </div>
+          <div>
+            <div class="score ${label.cls}">${p.score} — ${label.text}</div>
+          </div>
+        </div>
+        <div class="summary">${p.summary}</div>
+        <div class="keywords">${p.keywords.map(k => `<span class="kw">${k}</span>`).join('')}</div>
+        <div class="card-footer">
+          <div style="font-size:12px;color:var(--muted)">${p.score>=80? '✅' : p.score>=60? '⚠️' : p.score>=40? '⚠️' : '🚫'} ${p.keywords.slice(0,3).join(' · ')}</div>
+          <div>
+            <button class="ghost" onclick="openModal('${p.id}')">Ver ficha</button>
+            <button class="fav-btn" onclick="toggleFav('${p.id}')">${favorites.includes(p.id)? '★' : '☆'}</button>
+          </div>
+        </div>
+      </div>
+    `;
+    ROOT.appendChild(card);
+  });
+}
+
+function findByBarcode(code){
+  return PRODUCTS.find(p => p.barcode === code);
+}
+
+function init(){
+  buildCategoryOptions();
+  renderGrid();
+
+  // events
+  searchInput.addEventListener('input', () => renderGrid(searchInput.value, categorySelect.value));
+  categorySelect.addEventListener('change', () => renderGrid(searchInput.value, categorySelect.value));
+
+  // simulate scanner search by barcode input
+  scanBtn.addEventListener('click', () => {
+    const code = barcodeInput.value.trim();
+    if(!code){ alert('Pega un código de barras (por ejemplo 7501000000066 para Oreo según demo).'); return; }
+    const found = findByBarcode(code);
+    if(found) openModal(found.id);
+    else alert('Producto no registrado en la base local de Poulandia.');
+  });
+
+  showFavBtn.addEventListener('click', () => showFavorites());
+
+  // make modal close available globally
+  window.openModal = openModal;
+  window.closeModal = closeModal;
+  window.toggleFav = toggleFav;
+  window.copyName = copyName;
+  // also expose tryAlternate so inline onerror can call it
+  window.tryAlternate = tryAlternate;
+  window.buildCandidates = buildCandidates;
+  window.dataAltsFor = dataAltsFor;
+}
+init();
+
+// === Integración con calificaciones guardadas ===
+
+// Convierte estrellas (1–5) a un porcentaje (20–100)
+function starsToPercent(stars){
+  return (stars / 5) * 100;
+}
+
+// Calcula el promedio de estrellas desde localStorage
+function applyUserReviews(){
+  const reviews = JSON.parse(localStorage.getItem('poulandia_reviews') || '{}');
+  if(Object.keys(reviews).length === 0) return;
+
+  PRODUCTS = PRODUCTS.map(p=>{
+    const r = reviews[p.id];
+    if(!r || r.length===0) return p;
+
+    const avgStars = r.reduce((a,b)=>a+b.stars,0)/r.length;
+    const userPercent = starsToPercent(avgStars);
+
+    // Mezclamos score original (70%) + reseñas (30%)
+    const newScore = Math.round((p.score*0.7) + (userPercent*0.3));
+
+    return {...p, score:newScore};
+  });
+}
+
+  </script>
+
+  <script>
+    function toggleMenu(){
+      const menu = document.getElementById('menuPanel');
+      menu.style.display = (menu.style.display === 'block') ? 'none' : 'block';
+    }
+  </script>
+</body>
+</html>
+
